@@ -1,0 +1,47 @@
+version: '3.7'
+
+services:
+  backend:
+    platform: linux/amd64
+    build:
+      context: ./
+      dockerfile: ./Dockerfile.production
+    restart: unless-stopped
+    ports:
+      - "8041:80"
+
+  database:
+    image: mysql:5.7
+    platform: linux/amd64
+    ports:
+      - "33061:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - db-data:/var/lib/mysql:rw
+
+  redis:
+    image: redis:6.2.7
+
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - '1080:1080'
+      - '1025:1025'
+
+  k6:
+    image: grafana/k6:0.47.0
+    volumes:
+      - ./scripts:/scripts
+
+  varnish:
+    image: varnish:6.6
+    ports:
+      - "8042:80"
+    volumes:
+      - ./varnish/default.vcl:/etc/varnish/default.vcl:ro
+    depends_on:
+      - backend
+
+volumes:
+  db-data:

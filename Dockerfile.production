@@ -1,0 +1,40 @@
+FROM ubuntu:20.04
+
+# Instalar PHP
+RUN apt -y update && apt -y upgrade \
+    && apt install lsb-release ca-certificates apt-transport-https software-properties-common -y \
+    && add-apt-repository ppa:ondrej/php -y \
+    && apt -y update \
+    && apt install -y php8.1 php8.1-bcmath php8.1-cli php8.1-common php8.1-curl php8.1-dev php8.1-fpm php8.1-gd  \
+    && apt install -y php8.1-igbinary php8.1-imagick php8.1-imap php8.1-intl php8.1-ldap php8.1-mbstring php8.1-mysql php8.1-pdo-sqlite \
+    && apt install -y php8.1-opcache php8.1-readline php8.1-redis php8.1-soap php8.1-xml php8.1-xmlrpc php8.1-zip \
+    && apt install -y wget zip libaio1 build-essential \
+    && apt install -y curl nginx
+
+# Configurar FPM para que escuche en el puerto 9000
+RUN mkdir /run/php/
+RUN echo "listen = 9000" >> /etc/php/8.1/fpm/pool.d/www.conf
+
+COPY --from=composer:2.2.7 /usr/bin/composer /usr/bin/composer
+
+# Instalar Nodejs y Yarn
+RUN apt-get install -y nodejs && \
+    apt-get install -y npm && npm install -g n
+RUN n v18 && npm install -g yarn
+
+WORKDIR /app
+
+COPY . .
+
+RUN composer install
+
+WORKDIR /app
+
+#RUN npm install && npm run build --production
+
+RUN chmod +x ./docker/docker_wrapper_script.sh
+COPY ./docker/nginx/prod/default.conf /etc/nginx/sites-enabled/default
+
+ENV APP_ENV=dev
+
+CMD ["./docker/docker_wrapper_script.sh"]
